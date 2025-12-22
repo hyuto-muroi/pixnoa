@@ -5,6 +5,7 @@ plugins {
     alias(libs.plugins.composeMultiplatform)
     alias(libs.plugins.composeCompiler)
     alias(libs.plugins.composeHotReload)
+    alias(libs.plugins.ktlint)
 }
 
 kotlin {
@@ -32,6 +33,16 @@ kotlin {
             implementation(compose.desktop.currentOs)
             implementation(libs.kotlinx.coroutinesSwing)
         }
+    }
+}
+
+ktlint {
+    verbose.set(true)
+    outputToConsole.set(true)
+
+    filter {
+        exclude("**/build/**")
+        exclude("**/generated/**")
     }
 }
 
