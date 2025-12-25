@@ -35,7 +35,6 @@ kotlin {
     }
 }
 
-
 compose.desktop {
     application {
         mainClass = "org.example.pixnoa.MainKt"
