@@ -1,10 +1,17 @@
 package org.example.pixnoa.data.source
 
+import org.bytedeco.javacpp.indexer.IntIndexer
+import org.bytedeco.javacpp.indexer.UByteIndexer
+import org.bytedeco.opencv.global.opencv_core.CV_32F
+import org.bytedeco.opencv.global.opencv_core.CV_8U
+import org.bytedeco.opencv.global.opencv_core.KMEANS_PP_CENTERS
+import org.bytedeco.opencv.global.opencv_core.kmeans
 import org.bytedeco.opencv.global.opencv_imgproc.INTER_AREA
 import org.bytedeco.opencv.global.opencv_imgproc.INTER_NEAREST
 import org.bytedeco.opencv.global.opencv_imgproc.resize
 import org.bytedeco.opencv.opencv_core.Mat
 import org.bytedeco.opencv.opencv_core.Size
+import org.bytedeco.opencv.opencv_core.TermCriteria
 
 /** OpenCV を使用した画像処理を提供するオブジェクト */
 object OpenCvProcessor {
@@ -78,6 +85,68 @@ object OpenCvProcessor {
             dstImg.release()
             throw e
         }
+
+        return dstImg
+    }
+
+    /**
+     * 画像の色を量子化
+     *
+     * @param image 色を量子化する元の画像
+     * @param colorCount 元画像の色を何色に削減するかを指定する数値
+     * @return 色を量子化した画像。呼び出し元が [Mat.release] で解放する責任を持つ
+     * @throws IllegalArgumentException [colorCount] が0以下の場合
+     * @throws IllegalArgumentException [image] が空の場合
+     * @throws IllegalArgumentException [colorCount] が元画像のピクセル数より大きい場合
+     */
+    fun quantizeColors(
+        image: Mat,
+        colorCount: Int,
+    ): Mat {
+        if (colorCount <= 0) throw IllegalArgumentException("The colorCount must be greater than zero.")
+
+        if (image.empty()) throw IllegalArgumentException("The image must not be empty.")
+
+        if (colorCount >
+            image.rows() * image.cols()
+        ) {
+            throw IllegalArgumentException("colorCount exceeds the number of pixels.")
+        }
+
+        val floatPixels = Mat()
+        val bestLabels = Mat()
+        val centers = Mat()
+        val centers8U = Mat()
+        val result = Mat(image.rows() * image.cols(), 1, image.type())
+        try {
+            val pixels = image.reshape(1, image.rows() * image.cols())
+            pixels.convertTo(floatPixels, CV_32F)
+
+            val terminationConditions = TermCriteria(TermCriteria.EPS + TermCriteria.MAX_ITER, 100, 0.1)
+            kmeans(floatPixels, colorCount, bestLabels, terminationConditions, 3, KMEANS_PP_CENTERS, centers)
+
+            centers.convertTo(centers8U, CV_8U)
+
+            val resultIdx = result.createIndexer<UByteIndexer>()
+            val labelsIdx = bestLabels.createIndexer<IntIndexer>()
+            val centersIdx = centers8U.createIndexer<UByteIndexer>()
+            for (i in 0 until image.rows() * image.cols()) {
+                val label = labelsIdx.get(i.toLong())
+                for (c in 0 until image.channels()) {
+                    val color = centersIdx.get(label.toLong(), c.toLong())
+                    resultIdx.put(i.toLong(), 0L, c.toLong(), color)
+                }
+            }
+        } catch (e: Exception) {
+            floatPixels.release()
+            bestLabels.release()
+            centers.release()
+            centers8U.release()
+            result.release()
+            throw e
+        }
+
+        val dstImg = result.reshape(image.channels(), image.rows())
 
         return dstImg
     }
