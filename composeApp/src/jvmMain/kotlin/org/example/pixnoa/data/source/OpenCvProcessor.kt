@@ -1,6 +1,7 @@
 package org.example.pixnoa.data.source
 
 import org.bytedeco.opencv.global.opencv_imgproc.INTER_AREA
+import org.bytedeco.opencv.global.opencv_imgproc.INTER_NEAREST
 import org.bytedeco.opencv.global.opencv_imgproc.resize
 import org.bytedeco.opencv.opencv_core.Mat
 import org.bytedeco.opencv.opencv_core.Size
@@ -35,6 +36,44 @@ object OpenCvProcessor {
 
         try {
             resize(image, dstImg, size, 0.0, 0.0, INTER_AREA)
+        } catch (e: Exception) {
+            dstImg.release()
+            throw e
+        }
+
+        return dstImg
+    }
+
+    /**
+     * 画像をドットサイズに基づいてアップスケール
+     *
+     * @param image アップスケールする元の画像
+     * @param dotSize アップスケールの倍率。1以上の値を指定する
+     * @return アップスケールされた画像。呼び出し元が [Mat.release] で解放する責任を持つ
+     * @throws IllegalArgumentException [dotSize] が0以下の場合
+     * @throws IllegalArgumentException [image] が空の場合
+     * @throws IllegalArgumentException [dotSize] が画像のサイズより大きい場合
+     */
+    fun upscale(
+        image: Mat,
+        dotSize: Int,
+    ): Mat {
+        if (dotSize <= 0) throw IllegalArgumentException("The dotSize must be greater than zero.")
+
+        if (image.empty()) throw IllegalArgumentException("The image must not be empty.")
+
+        val dstWidth: Int = image.cols() * dotSize
+        val dstHeight: Int = image.rows() * dotSize
+
+        if (dstWidth <= 0 || dstHeight <= 0) {
+            throw IllegalArgumentException("dotSize ($dotSize) is too large for the image dimensions.")
+        }
+
+        val size = Size(dstWidth, dstHeight)
+        val dstImg = Mat()
+
+        try {
+            resize(image, dstImg, size, 0.0, 0.0, INTER_NEAREST)
         } catch (e: Exception) {
             dstImg.release()
             throw e

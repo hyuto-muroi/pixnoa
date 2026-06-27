@@ -75,6 +75,42 @@ class OpenCvProcessorTest {
         assertFailsWith<IllegalArgumentException> { OpenCvProcessor.downscale(sampleImage, -1) }
     }
 
+    // dotSizeで幅と高さをそれぞれ掛けたサイズに拡大されること
+    @Test
+    fun upscale_withValidDotSize_returnsUpscaledSize() {
+        result = OpenCvProcessor.upscale(sampleImage, 2)
+        assertEquals(IMAGE_WIDTH * 2, result.cols())
+        assertEquals(IMAGE_HEIGHT * 2, result.rows())
+    }
+
+    // dotSizeが1の場合、元の画像と同じサイズが返ること
+    @Test
+    fun upscale_withDotSizeOne_returnsSameSize() {
+        result = OpenCvProcessor.upscale(sampleImage, 1)
+        assertEquals(IMAGE_WIDTH, result.cols())
+        assertEquals(IMAGE_HEIGHT, result.rows())
+    }
+
+    // 空の画像の場合、IllegalArgumentExceptionがスローされること
+    @Test
+    fun upscale_withEmptyImage_throwsIllegalArgumentException() {
+        sampleImage.release()
+        sampleImage = Mat()
+        assertFailsWith<IllegalArgumentException> { OpenCvProcessor.upscale(sampleImage, 1) }
+    }
+
+    // dotSizeが0の場合、IllegalArgumentExceptionがスローされること
+    @Test
+    fun upscale_withZeroDotSize_throwsIllegalArgumentException() {
+        assertFailsWith<IllegalArgumentException> { OpenCvProcessor.upscale(sampleImage, 0) }
+    }
+
+    // dotSizeが負の数の場合、IllegalArgumentExceptionがスローされること
+    @Test
+    fun upscale_withNegativeDotSize_throwsIllegalArgumentException() {
+        assertFailsWith<IllegalArgumentException> { OpenCvProcessor.upscale(sampleImage, -1) }
+    }
+
     companion object {
         const val IMAGE_WIDTH = 200
         const val IMAGE_HEIGHT = 100
