@@ -91,6 +91,23 @@ class OpenCvProcessorTest {
         assertEquals(IMAGE_HEIGHT, result.rows())
     }
 
+    // colorCountで指定した色数に削減された画像が元の画像と同じサイズで返ること
+    @Test
+    fun quantizeColors_withValidColorCount_returnsSameSizeImage() {
+        result = OpenCvProcessor.quantizeColors(sampleImage, 8)
+        assertEquals(IMAGE_WIDTH, result.cols())
+        assertEquals(IMAGE_HEIGHT, result.rows())
+        assertEquals(sampleImage.type(), result.type())
+    }
+
+    // colorCountが1の場合、元の画像と同じサイズの画像が返ること
+    @Test
+    fun quantizeColors_withColorCountOne_returnsSameSizeImage() {
+        result = OpenCvProcessor.quantizeColors(sampleImage, 1)
+        assertEquals(IMAGE_WIDTH, result.cols())
+        assertEquals(IMAGE_HEIGHT, result.rows())
+    }
+
     // 空の画像の場合、IllegalArgumentExceptionがスローされること
     @Test
     fun upscale_withEmptyImage_throwsIllegalArgumentException() {
@@ -109,6 +126,34 @@ class OpenCvProcessorTest {
     @Test
     fun upscale_withNegativeDotSize_throwsIllegalArgumentException() {
         assertFailsWith<IllegalArgumentException> { OpenCvProcessor.upscale(sampleImage, -1) }
+    }
+
+    // colorCountがピクセル数より大きい場合、IllegalArgumentExceptionがスローされること
+    @Test
+    fun quantizeColors_whenColorCountExceedsPixelCount_throwsIllegalArgumentException() {
+        sampleImage.release()
+        sampleImage = Mat(1, 1, CV_8UC3)
+        assertFailsWith<IllegalArgumentException> { OpenCvProcessor.quantizeColors(sampleImage, 2) }
+    }
+
+    // 空の画像の場合、IllegalArgumentExceptionがスローされること
+    @Test
+    fun quantizeColors_withEmptyImage_throwsIllegalArgumentException() {
+        sampleImage.release()
+        sampleImage = Mat()
+        assertFailsWith<IllegalArgumentException> { OpenCvProcessor.quantizeColors(sampleImage, 8) }
+    }
+
+    // colorCountが0の場合、IllegalArgumentExceptionがスローされること
+    @Test
+    fun quantizeColors_withZeroColorCount_throwsIllegalArgumentException() {
+        assertFailsWith<IllegalArgumentException> { OpenCvProcessor.quantizeColors(sampleImage, 0) }
+    }
+
+    // colorCountが負の数の場合、IllegalArgumentExceptionがスローされること
+    @Test
+    fun quantizeColors_withNegativeColorCount_throwsIllegalArgumentException() {
+        assertFailsWith<IllegalArgumentException> { OpenCvProcessor.quantizeColors(sampleImage, -1) }
     }
 
     companion object {
