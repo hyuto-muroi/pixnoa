@@ -21,7 +21,9 @@ object OpenCvProcessor {
      * @param image ダウンスケールする元の画像
      * @param dotSize ダウンスケールの倍率。1以上の値を指定する
      * @return ダウンスケールされた画像。呼び出し元が [Mat.release] で解放する責任を持つ
-     * @throws IllegalArgumentException [dotSize] が0以下の場合、[image] が空の場合、または [dotSize] が画像のサイズより大きい場合
+     * @throws IllegalArgumentException [dotSize] が0以下の場合
+     * @throws IllegalArgumentException [image] が空の場合
+     * @throws IllegalArgumentException [dotSize] が画像のサイズより大きい場合
      */
     fun downscale(
         image: Mat,
