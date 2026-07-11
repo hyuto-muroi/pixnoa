@@ -4,6 +4,7 @@ import org.bytedeco.opencv.global.opencv_core.CV_8UC3
 import org.bytedeco.opencv.global.opencv_imgcodecs.imwrite
 import org.bytedeco.opencv.opencv_core.Mat
 import java.io.File
+import java.io.FileNotFoundException
 import java.io.IOException
 import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
@@ -50,5 +51,43 @@ class FileHandlerTest {
     @Test
     fun readBytes_theFileCannotBeReadOrDoesNotExist_throwsIOException() {
         assertFailsWith<IOException> { FileHandler.readBytes("/non/existent/path/image.png") }
+    }
+
+    // 指定したパスにファイルが出力されること
+    @Test
+    fun writeBytes_fileIsSavedToTheSpecifiedPath() {
+        val sampleImageData = File(sampleFilePath).readBytes()
+        val tmpDir = System.getProperty("java.io.tmpdir")
+        val path = "$tmpDir/output_image.png"
+        FileHandler.writeBytes(sampleImageData, path)
+        assertTrue(File(path).readBytes().isNotEmpty())
+    }
+
+    // 出力するファイルのデータが空だった場合は IllegalArgumentException がスローされること
+    @Test
+    fun writeBytes_dataInTheOutputFileIsEmpty_throwsIllegalArgumentException() {
+        val tmpDir = System.getProperty("java.io.tmpdir")
+        val path = "$tmpDir/output_image.png"
+        assertFailsWith<IllegalArgumentException> { FileHandler.writeBytes(ByteArray(0), path) }
+    }
+
+    // 出力先のパスが空文字あるいは空白の場合は IllegalArgumentException がスローされること
+    @Test
+    fun writeBytes_outputPathIsAnEmptyStringOrContainsOnlySpaces_throwsIllegalArgumentException() {
+        val sampleImageData = File(sampleFilePath).readBytes()
+        assertFailsWith<IllegalArgumentException> { FileHandler.writeBytes(sampleImageData, "") }
+        assertFailsWith<IllegalArgumentException> { FileHandler.writeBytes(sampleImageData, " ") }
+    }
+
+    // ファイルの出力に失敗した場合は FileNotFoundException がスローされること
+    @Test
+    fun writeBytes_fileFailsToBeWritten_throwsFileNotFoundException() {
+        val sampleImageData = File(sampleFilePath).readBytes()
+        assertFailsWith<FileNotFoundException> {
+            FileHandler.writeBytes(
+                sampleImageData,
+                "/non/existent/path/output.png",
+            )
+        }
     }
 }
