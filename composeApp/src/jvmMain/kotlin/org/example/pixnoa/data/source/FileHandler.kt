@@ -16,4 +16,22 @@ object FileHandler {
         require(path.isNotBlank()) { "The path must not be blank." }
         return File(path).readBytes()
     }
+
+    /**
+     * 指定パスにファイルを出力する
+     *
+     * @param bytes 出力するファイルの内容
+     * @param path ファイルの出力先
+     * @throws IllegalArgumentException [bytes] が空データの場合
+     * @throws IllegalArgumentException [path] が空文字あるいは空白の場合
+     * @throws java.io.FileNotFoundException ファイルが存在しない、または書き出し先のディレクトリが存在しない場合
+     */
+    fun writeBytes(
+        bytes: ByteArray,
+        path: String,
+    ) {
+        require(bytes.isNotEmpty()) { "The bytes must not be empty." }
+        require(path.isNotBlank()) { "The path must not be blank." }
+        File(path).writeBytes(bytes)
+    }
 }
