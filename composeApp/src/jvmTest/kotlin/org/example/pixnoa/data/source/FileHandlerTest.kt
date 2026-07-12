@@ -33,7 +33,7 @@ class FileHandlerTest {
         sampleFile.delete()
     }
 
-    // 指定したパスの画像データがByteArray（バイト列）で返されること
+    // 指定したパスのファイルの内容がByteArray（バイト列）で返されること
     @Test
     fun readBytes_withValidPath_returnsByteArray() {
         val result = FileHandler.readBytes(sampleFilePath)
