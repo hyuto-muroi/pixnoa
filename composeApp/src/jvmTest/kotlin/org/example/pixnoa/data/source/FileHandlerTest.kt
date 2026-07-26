@@ -3,13 +3,17 @@ package org.example.pixnoa.data.source
 import org.bytedeco.opencv.global.opencv_core.CV_8UC3
 import org.bytedeco.opencv.global.opencv_imgcodecs.imwrite
 import org.bytedeco.opencv.opencv_core.Mat
+import java.awt.Component
 import java.io.File
 import java.io.FileNotFoundException
 import java.io.IOException
+import javax.swing.JFileChooser
 import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
 import kotlin.test.Test
+import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 class FileHandlerTest {
@@ -89,5 +93,28 @@ class FileHandlerTest {
                 "/non/existent/path/output.png",
             )
         }
+    }
+
+    // ファイルが選択された場合、選択されたファイルのパスが返されること
+    @Test
+    fun openFileDialog_fileIsSelected_returnsThePathOfTheSelectedFile() {
+        val chooser =
+            object : JFileChooser() {
+                override fun showOpenDialog(parent: Component?): Int {
+                    selectedFile = File(sampleFilePath)
+                    return APPROVE_OPTION
+                }
+            }
+        assertEquals(sampleFilePath, FileHandler.openFileDialog(chooser))
+    }
+
+    // ダイアログがキャンセルされた場合、null が返されること
+    @Test
+    fun openFileDialog_dialogIsCancelled_returnsNull() {
+        val chooser =
+            object : JFileChooser() {
+                override fun showOpenDialog(parent: Component?): Int = CANCEL_OPTION
+            }
+        assertNull(FileHandler.openFileDialog(chooser))
     }
 }
