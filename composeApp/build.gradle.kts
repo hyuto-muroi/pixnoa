@@ -37,6 +37,10 @@ kotlin {
     }
 }
 
+tasks.withType<Test>().configureEach {
+    systemProperty("java.awt.headless", "true")
+}
+
 ktlint {
     verbose.set(true)
     outputToConsole.set(true)
