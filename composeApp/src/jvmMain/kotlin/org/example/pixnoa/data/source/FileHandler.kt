@@ -46,4 +46,15 @@ object FileHandler {
         val result = chooser.showOpenDialog(null)
         return if (result == JFileChooser.APPROVE_OPTION) chooser.selectedFile.path else null
     }
+
+    /**
+     * ファイル保存ダイアログを表示し、保存先のパスを取得する
+     *
+     * @param chooser 表示するファイル保存ダイアログ
+     * @return 保存先のパス（ダイアログがキャンセルされた場合は null を返す）
+     */
+    fun saveFileDialog(chooser: JFileChooser = JFileChooser()): String? {
+        val result = chooser.showSaveDialog(null)
+        return if (result == JFileChooser.APPROVE_OPTION) chooser.selectedFile.path else null
+    }
 }

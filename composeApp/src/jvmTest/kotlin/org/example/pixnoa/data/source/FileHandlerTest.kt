@@ -117,4 +117,27 @@ class FileHandlerTest {
             }
         assertNull(FileHandler.openFileDialog(chooser))
     }
+
+    // 保存先が指定された場合、指定されたパスが返されること
+    @Test
+    fun saveFileDialog_fileIsSelected_returnsThePathOfTheSelectedFile() {
+        val chooser =
+            object : JFileChooser() {
+                override fun showSaveDialog(parent: Component?): Int {
+                    selectedFile = File(sampleFilePath)
+                    return APPROVE_OPTION
+                }
+            }
+        assertEquals(sampleFilePath, FileHandler.saveFileDialog(chooser))
+    }
+
+    // ダイアログがキャンセルされた場合、null が返されること
+    @Test
+    fun saveFileDialog_dialogIsCancelled_returnsNull() {
+        val chooser =
+            object : JFileChooser() {
+                override fun showSaveDialog(parent: Component?): Int = CANCEL_OPTION
+            }
+        assertNull(FileHandler.saveFileDialog(chooser))
+    }
 }
