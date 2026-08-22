@@ -34,6 +34,9 @@ kotlin {
             implementation(libs.kotlinx.coroutinesSwing)
             implementation(libs.opencv.platform)
         }
+        jvmTest.dependencies {
+            implementation(compose.desktop.uiTestJUnit4)
+        }
     }
 }
 
