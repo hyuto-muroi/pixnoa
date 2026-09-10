@@ -48,4 +48,8 @@ class ConverterViewModel(
             }
         }
     }
+
+    fun onClear() {
+        _uiState.update { ConverterState() }
+    }
 }
