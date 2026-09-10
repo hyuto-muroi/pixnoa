@@ -2,6 +2,7 @@ package org.example.pixnoa.ui.screen.converter
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -15,6 +16,7 @@ import org.example.pixnoa.domain.usecase.LoadImageUseCase
 class ConverterViewModel(
     private val loadImageUseCase: LoadImageUseCase,
     private val convertToPixelArtUseCase: ConvertToPixelArtUseCase,
+    private val dispatcher: CoroutineDispatcher = Dispatchers.Default,
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(ConverterState())
 
@@ -31,7 +33,7 @@ class ConverterViewModel(
      */
     fun onImageSelected(path: String) {
         _uiState.update { it.copy(isConverting = true) }
-        viewModelScope.launch(Dispatchers.Default) {
+        viewModelScope.launch(dispatcher) {
             try {
                 val originalImage = loadImageUseCase.execute(path)
                 val convertedImage = convertToPixelArtUseCase.execute(originalImage, _uiState.value.config)
