@@ -13,6 +13,7 @@ import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
+import kotlin.test.assertFalse
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
@@ -128,7 +129,7 @@ class FileHandlerTest {
                     return APPROVE_OPTION
                 }
             }
-        assertEquals(sampleFilePath, FileHandler.saveFileDialog(chooser))
+        assertEquals(sampleFilePath, FileHandler.saveFileDialog(chooser, confirmOverwrite = { true }))
     }
 
     // ダイアログがキャンセルされた場合、null が返されること
@@ -139,5 +140,70 @@ class FileHandlerTest {
                 override fun showSaveDialog(parent: Component?): Int = CANCEL_OPTION
             }
         assertNull(FileHandler.saveFileDialog(chooser))
+    }
+
+    // 選択したファイルが存在しない場合、上書き確認をせずそのままパスが返されること
+    @Test
+    fun saveFileDialog_whenFileDoesNotExist_doesNotAskForConfirmation() {
+        val tmpDir = System.getProperty("java.io.tmpdir")
+        val nonExistentFile = File("$tmpDir/does_not_exist_${System.nanoTime()}.png")
+        var confirmCalled = false
+        val chooser =
+            object : JFileChooser() {
+                override fun showSaveDialog(parent: Component?): Int {
+                    selectedFile = nonExistentFile
+                    return APPROVE_OPTION
+                }
+            }
+
+        val result =
+            FileHandler.saveFileDialog(chooser, confirmOverwrite = {
+                confirmCalled = true
+                true
+            })
+
+        assertEquals(nonExistentFile.path, result)
+        assertFalse(confirmCalled)
+    }
+
+    // 選択したファイルが既に存在し、上書きを許可した場合、そのパスが返されること
+    @Test
+    fun saveFileDialog_whenFileExistsAndOverwriteConfirmed_returnsPath() {
+        val chooser =
+            object : JFileChooser() {
+                override fun showSaveDialog(parent: Component?): Int {
+                    selectedFile = File(sampleFilePath)
+                    return APPROVE_OPTION
+                }
+            }
+
+        val result = FileHandler.saveFileDialog(chooser, confirmOverwrite = { true })
+
+        assertEquals(sampleFilePath, result)
+    }
+
+    // 選択したファイルが既に存在し、上書きを拒否した場合、ダイアログが再表示されること
+    @Test
+    fun saveFileDialog_whenOverwriteDeclined_showsDialogAgain() {
+        var showDialogCallCount = 0
+        var confirmCallCount = 0
+        val chooser =
+            object : JFileChooser() {
+                override fun showSaveDialog(parent: Component?): Int {
+                    showDialogCallCount++
+                    selectedFile = File(sampleFilePath)
+                    return APPROVE_OPTION
+                }
+            }
+
+        val result =
+            FileHandler.saveFileDialog(chooser) {
+                confirmCallCount++
+                confirmCallCount > 1
+            }
+
+        assertEquals(sampleFilePath, result)
+        assertEquals(2, showDialogCallCount)
+        assertEquals(2, confirmCallCount)
     }
 }

@@ -16,6 +16,7 @@ import org.example.pixnoa.domain.model.PixelArtResult
 import org.example.pixnoa.domain.repository.ImageRepository
 import org.example.pixnoa.domain.repository.PixelArtConverter
 import org.example.pixnoa.domain.usecase.ConvertToPixelArtUseCase
+import org.example.pixnoa.domain.usecase.ExportImageUseCase
 import org.example.pixnoa.domain.usecase.LoadImageUseCase
 import org.junit.Rule
 import kotlin.test.Test
@@ -35,17 +36,19 @@ class ConverterScreenTest {
             override val lifecycle: Lifecycle get() = registry
         }
 
-    private val loadImageUseCase =
-        LoadImageUseCase(
-            object : ImageRepository {
-                override fun load(path: String): ByteArray = byteArrayOf()
+    private val imageRepository =
+        object : ImageRepository {
+            override fun load(path: String): ByteArray = byteArrayOf()
 
-                override fun save(
-                    bytes: ByteArray,
-                    path: String,
-                ) = Unit
-            },
-        )
+            override fun save(
+                bytes: ByteArray,
+                path: String,
+            ) = Unit
+        }
+
+    private val loadImageUseCase = LoadImageUseCase(imageRepository)
+
+    private val exportImageUseCase = ExportImageUseCase(imageRepository)
 
     private val convertToPixelArtUseCase =
         ConvertToPixelArtUseCase(
@@ -66,7 +69,7 @@ class ConverterScreenTest {
                 LocalViewModelStoreOwner provides viewModelStoreOwner,
                 LocalLifecycleOwner provides lifecycleOwner,
             ) {
-                converterScreen(loadImageUseCase, convertToPixelArtUseCase)
+                converterScreen(loadImageUseCase, convertToPixelArtUseCase, exportImageUseCase)
             }
         }
     }
@@ -85,6 +88,14 @@ class ConverterScreenTest {
         setConverterScreenContent()
 
         composeTestRule.onNodeWithText("クリア").assertIsDisplayed()
+    }
+
+    // 保存ボタンが表示されること
+    @Test
+    fun converterScreen_displaysSaveButton() {
+        setConverterScreenContent()
+
+        composeTestRule.onNodeWithText("保存").assertIsDisplayed()
     }
 
     // 初期状態では画像未選択のプレースホルダーが表示されること
