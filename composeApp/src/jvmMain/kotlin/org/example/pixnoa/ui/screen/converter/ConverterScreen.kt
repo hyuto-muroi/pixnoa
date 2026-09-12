@@ -21,6 +21,7 @@ import org.example.pixnoa.data.source.FileHandler
 import org.example.pixnoa.domain.usecase.ConvertToPixelArtUseCase
 import org.example.pixnoa.domain.usecase.LoadImageUseCase
 import org.example.pixnoa.ui.component.imagePreview
+import org.example.pixnoa.ui.component.parameterPanel
 
 @Composable
 fun converterScreen(
@@ -30,16 +31,22 @@ fun converterScreen(
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
 
-    Column(
+    Row(
         modifier = Modifier.fillMaxSize(),
-        horizontalAlignment = Alignment.CenterHorizontally,
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalAlignment = Alignment.CenterVertically,
     ) {
         imagePreview(
             imageBytes = state.convertedImage,
             modifier = Modifier.weight(1f).fillMaxWidth(),
         )
 
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+        Column(verticalArrangement = Arrangement.spacedBy(8.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+            parameterPanel(
+                config = state.config,
+                onDotSizeChange = { viewModel.onDotSizeChanged(it) },
+                onColorCountChange = { viewModel.onColorCountChanged(it) },
+            )
             Button(
                 onClick = {
                     val path = FileHandler.openFileDialog()

@@ -9,6 +9,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import org.example.pixnoa.domain.model.PixelArtConfig
 import org.example.pixnoa.domain.usecase.ConvertToPixelArtUseCase
 import org.example.pixnoa.domain.usecase.LoadImageUseCase
 
@@ -51,7 +52,45 @@ class ConverterViewModel(
         }
     }
 
+    fun onDotSizeChanged(value: Int) {
+        updateConfigAndReconvert { it.copy(dotSize = value) }
+    }
+
+    fun onColorCountChanged(value: Int) {
+        updateConfigAndReconvert { it.copy(colorCount = value) }
+    }
+
+    /**
+     * [transform] で [PixelArtConfig] を更新し、画像が選択済みならその設定で再変換する
+     *
+     * 画像が未選択の場合は設定の更新のみ行う。再変換に失敗した場合は例外を投げず、[ConverterState.error] にメッセージを格納する。
+     */
+    private fun updateConfigAndReconvert(transform: (PixelArtConfig) -> PixelArtConfig) {
+        _uiState.update { it.copy(isConverting = true) }
+        viewModelScope.launch(dispatcher) {
+            try {
+                val newConfig = transform(_uiState.value.config)
+                val originalImage = _uiState.value.originalImage
+
+                if (originalImage == null) {
+                    _uiState.update { it.copy(config = newConfig, isConverting = false) }
+                } else {
+                    val convertedImage = convertToPixelArtUseCase.execute(originalImage, newConfig)
+                    _uiState.update {
+                        it.copy(
+                            config = newConfig,
+                            convertedImage = convertedImage.imageBytes,
+                            isConverting = false,
+                        )
+                    }
+                }
+            } catch (e: Exception) {
+                _uiState.update { it.copy(isConverting = false, error = e.toString()) }
+            }
+        }
+    }
+
     fun onClear() {
-        _uiState.update { ConverterState() }
+        _uiState.update { it.copy(originalImage = null, convertedImage = null) }
     }
 }
