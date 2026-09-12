@@ -58,19 +58,120 @@ class ConverterViewModelTest {
         assertTrue(state.error?.contains("変換失敗") == true)
     }
 
-    // onClearを呼ぶと状態が初期化されること
+    // 画像が未選択の場合、dotSizeの更新のみ行われconvertedImageは変わらないこと
     @Test
-    fun onClear_resetsStateToInitial() {
+    fun onDotSizeChanged_whenNoImageSelected_updatesConfigOnly() {
+        val viewModel = createViewModel()
+
+        viewModel.onDotSizeChanged(16)
+
+        val state = viewModel.uiState.value
+        assertEquals(16, state.config.dotSize)
+        assertNull(state.convertedImage)
+        assertFalse(state.isConverting)
+    }
+
+    // 画像が選択済みの場合、新しいdotSizeを使って再変換されconvertedImageが更新されること
+    @Test
+    fun onDotSizeChanged_whenImageSelected_reconvertsWithNewDotSize() {
+        var receivedConfig: PixelArtConfig? = null
+        val viewModel =
+            createViewModel(
+                load = { byteArrayOf(1) },
+                convert = { _, config ->
+                    receivedConfig = config
+                    PixelArtResult(byteArrayOf(9), width = 1, height = 1)
+                },
+            )
+        viewModel.onImageSelected("sample/path.png")
+
+        viewModel.onDotSizeChanged(20)
+
+        val state = viewModel.uiState.value
+        assertEquals(20, state.config.dotSize)
+        assertEquals(20, receivedConfig?.dotSize)
+        assertTrue(byteArrayOf(9).contentEquals(state.convertedImage))
+        assertFalse(state.isConverting)
+    }
+
+    // 再変換に失敗した場合、errorに反映されisConvertingがfalseに戻ること
+    @Test
+    fun onDotSizeChanged_whenReconvertFails_setsErrorAndStopsConverting() {
+        var callCount = 0
+        val viewModel =
+            createViewModel(
+                load = { byteArrayOf(1) },
+                convert = { _, _ ->
+                    callCount++
+                    if (callCount == 1) {
+                        PixelArtResult(byteArrayOf(9), width = 1, height = 1)
+                    } else {
+                        throw IllegalStateException("再変換失敗")
+                    }
+                },
+            )
+        viewModel.onImageSelected("sample/path.png")
+
+        viewModel.onDotSizeChanged(20)
+
+        val state = viewModel.uiState.value
+        assertFalse(state.isConverting)
+        assertTrue(state.error?.contains("再変換失敗") == true)
+    }
+
+    // 画像が未選択の場合、colorCountの更新のみ行われconvertedImageは変わらないこと
+    @Test
+    fun onColorCountChanged_whenNoImageSelected_updatesConfigOnly() {
+        val viewModel = createViewModel()
+
+        viewModel.onColorCountChanged(64)
+
+        val state = viewModel.uiState.value
+        assertEquals(64, state.config.colorCount)
+        assertNull(state.convertedImage)
+        assertFalse(state.isConverting)
+    }
+
+    // 画像が選択済みの場合、新しいcolorCountを使って再変換されconvertedImageが更新されること
+    @Test
+    fun onColorCountChanged_whenImageSelected_reconvertsWithNewColorCount() {
+        var receivedConfig: PixelArtConfig? = null
+        val viewModel =
+            createViewModel(
+                load = { byteArrayOf(1) },
+                convert = { _, config ->
+                    receivedConfig = config
+                    PixelArtResult(byteArrayOf(9), width = 1, height = 1)
+                },
+            )
+        viewModel.onImageSelected("sample/path.png")
+
+        viewModel.onColorCountChanged(64)
+
+        val state = viewModel.uiState.value
+        assertEquals(64, state.config.colorCount)
+        assertEquals(64, receivedConfig?.colorCount)
+        assertTrue(byteArrayOf(9).contentEquals(state.convertedImage))
+        assertFalse(state.isConverting)
+    }
+
+    // クリアすると元画像・変換後画像は消えるが、configは保持されること
+    @Test
+    fun onClear_clearsImagesButKeepsConfig() {
         val viewModel =
             createViewModel(
                 load = { byteArrayOf(1) },
                 convert = { _, _ -> PixelArtResult(byteArrayOf(2), width = 1, height = 1) },
             )
         viewModel.onImageSelected("sample/path.png")
+        viewModel.onDotSizeChanged(20)
 
         viewModel.onClear()
 
-        assertEquals(ConverterState(), viewModel.uiState.value)
+        val state = viewModel.uiState.value
+        assertNull(state.originalImage)
+        assertNull(state.convertedImage)
+        assertEquals(20, state.config.dotSize)
     }
 
     private fun createViewModel(
