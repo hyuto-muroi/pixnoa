@@ -11,12 +11,14 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import org.example.pixnoa.domain.model.PixelArtConfig
 import org.example.pixnoa.domain.usecase.ConvertToPixelArtUseCase
+import org.example.pixnoa.domain.usecase.ExportImageUseCase
 import org.example.pixnoa.domain.usecase.LoadImageUseCase
 
 /** ドット絵変換画面の状態管理とユースケース呼び出しを行うViewModel */
 class ConverterViewModel(
     private val loadImageUseCase: LoadImageUseCase,
     private val convertToPixelArtUseCase: ConvertToPixelArtUseCase,
+    private val exportImageUseCase: ExportImageUseCase,
     private val dispatcher: CoroutineDispatcher = Dispatchers.Default,
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(ConverterState())
@@ -84,6 +86,19 @@ class ConverterViewModel(
                         )
                     }
                 }
+            } catch (e: Exception) {
+                _uiState.update { it.copy(isConverting = false, error = e.toString()) }
+            }
+        }
+    }
+
+    fun onExport(savePath: String) {
+        val convertedImage = _uiState.value.convertedImage ?: return
+        _uiState.update { it.copy(isConverting = true) }
+        viewModelScope.launch(dispatcher) {
+            try {
+                exportImageUseCase.execute(convertedImage, savePath)
+                _uiState.update { it.copy(isConverting = false) }
             } catch (e: Exception) {
                 _uiState.update { it.copy(isConverting = false, error = e.toString()) }
             }

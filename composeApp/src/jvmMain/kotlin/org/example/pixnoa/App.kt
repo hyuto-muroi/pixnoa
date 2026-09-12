@@ -5,6 +5,7 @@ import androidx.compose.runtime.Composable
 import org.example.pixnoa.data.repository.ImageRepositoryImpl
 import org.example.pixnoa.data.repository.PixelArtConverterImpl
 import org.example.pixnoa.domain.usecase.ConvertToPixelArtUseCase
+import org.example.pixnoa.domain.usecase.ExportImageUseCase
 import org.example.pixnoa.domain.usecase.LoadImageUseCase
 import org.example.pixnoa.ui.screen.converter.converterScreen
 import org.jetbrains.compose.ui.tooling.preview.Preview
@@ -16,6 +17,7 @@ fun app() {
         converterScreen(
             loadImageUseCase = LoadImageUseCase(ImageRepositoryImpl()),
             convertToPixelArtUseCase = ConvertToPixelArtUseCase(PixelArtConverterImpl()),
+            exportImageUseCase = ExportImageUseCase(ImageRepositoryImpl()),
         )
     }
 }

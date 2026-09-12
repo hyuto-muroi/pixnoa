@@ -6,6 +6,7 @@ import org.example.pixnoa.domain.model.PixelArtResult
 import org.example.pixnoa.domain.repository.ImageRepository
 import org.example.pixnoa.domain.repository.PixelArtConverter
 import org.example.pixnoa.domain.usecase.ConvertToPixelArtUseCase
+import org.example.pixnoa.domain.usecase.ExportImageUseCase
 import org.example.pixnoa.domain.usecase.LoadImageUseCase
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -174,8 +175,63 @@ class ConverterViewModelTest {
         assertEquals(20, state.config.dotSize)
     }
 
+    // 変換後画像が未生成の場合、書き出し処理は行われないこと
+    @Test
+    fun onExport_whenNoConvertedImage_doesNothing() {
+        var saveCalled = false
+        val viewModel = createViewModel(save = { _, _ -> saveCalled = true })
+
+        viewModel.onExport("output/path.png")
+
+        assertFalse(saveCalled)
+        assertFalse(viewModel.uiState.value.isConverting)
+    }
+
+    // 変換後画像がある場合、その内容と指定したパスで書き出されisConvertingがfalseに戻ること
+    @Test
+    fun onExport_whenConvertedImageExists_savesConvertedImageToGivenPath() {
+        var receivedBytes: ByteArray? = null
+        var receivedPath: String? = null
+        val converted = PixelArtResult(byteArrayOf(9, 9, 9), width = 1, height = 1)
+        val viewModel =
+            createViewModel(
+                load = { byteArrayOf(1) },
+                convert = { _, _ -> converted },
+                save = { bytes, path ->
+                    receivedBytes = bytes
+                    receivedPath = path
+                },
+            )
+        viewModel.onImageSelected("sample/path.png")
+
+        viewModel.onExport("output/path.png")
+
+        assertTrue(converted.imageBytes.contentEquals(receivedBytes))
+        assertEquals("output/path.png", receivedPath)
+        assertFalse(viewModel.uiState.value.isConverting)
+    }
+
+    // 書き出しに失敗した場合、errorに反映されisConvertingがfalseに戻ること
+    @Test
+    fun onExport_whenSaveFails_setsErrorAndStopsConverting() {
+        val viewModel =
+            createViewModel(
+                load = { byteArrayOf(1) },
+                convert = { _, _ -> PixelArtResult(byteArrayOf(9), width = 1, height = 1) },
+                save = { _, _ -> throw IllegalStateException("書き出し失敗") },
+            )
+        viewModel.onImageSelected("sample/path.png")
+
+        viewModel.onExport("output/path.png")
+
+        val state = viewModel.uiState.value
+        assertFalse(state.isConverting)
+        assertTrue(state.error?.contains("書き出し失敗") == true)
+    }
+
     private fun createViewModel(
         load: (String) -> ByteArray = { byteArrayOf() },
+        save: (ByteArray, String) -> Unit = { _, _ -> error("このテストでは使用されない想定") },
         convert: (ByteArray, PixelArtConfig) -> PixelArtResult = { _, _ -> PixelArtResult(byteArrayOf(), 0, 0) },
     ): ConverterViewModel {
         val imageRepository =
@@ -185,9 +241,7 @@ class ConverterViewModelTest {
                 override fun save(
                     bytes: ByteArray,
                     path: String,
-                ) {
-                    error("このテストでは使用されない想定")
-                }
+                ) = save(bytes, path)
             }
         val converter =
             object : PixelArtConverter {
@@ -200,6 +254,7 @@ class ConverterViewModelTest {
         return ConverterViewModel(
             loadImageUseCase = LoadImageUseCase(imageRepository),
             convertToPixelArtUseCase = ConvertToPixelArtUseCase(converter),
+            exportImageUseCase = ExportImageUseCase(imageRepository),
             dispatcher = Dispatchers.Unconfined,
         )
     }
