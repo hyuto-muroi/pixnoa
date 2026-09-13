@@ -1,6 +1,8 @@
 package org.example.pixnoa.data.source
 
+import org.bytedeco.javacpp.indexer.UByteIndexer
 import org.bytedeco.opencv.global.opencv_core.CV_8UC3
+import org.bytedeco.opencv.global.opencv_core.CV_8UC4
 import org.bytedeco.opencv.opencv_core.Mat
 import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
@@ -154,6 +156,44 @@ class OpenCvProcessorTest {
     @Test
     fun quantizeColors_withNegativeColorCount_throwsIllegalArgumentException() {
         assertFailsWith<IllegalArgumentException> { OpenCvProcessor.quantizeColors(sampleImage, -1) }
+    }
+
+    // 4チャンネル(透過あり)画像の場合、量子化後もサイズと4チャンネルが維持されること
+    @Test
+    fun quantizeColors_withFourChannelImage_returnsSameSizeFourChannelImage() {
+        val fourChannelImage = Mat(IMAGE_HEIGHT, IMAGE_WIDTH, CV_8UC4)
+
+        result = OpenCvProcessor.quantizeColors(fourChannelImage, 8)
+
+        assertEquals(IMAGE_WIDTH, result.cols())
+        assertEquals(IMAGE_HEIGHT, result.rows())
+        assertEquals(4, result.channels())
+
+        fourChannelImage.release()
+    }
+
+    // 4チャンネル(透過あり)画像の場合、アルファチャンネルは量子化されず元の値のまま保持されること
+    @Test
+    fun quantizeColors_withFourChannelImage_preservesAlphaChannel() {
+        val fourChannelImage = Mat(IMAGE_HEIGHT, IMAGE_WIDTH, CV_8UC4)
+        val sourceIndexer = fourChannelImage.createIndexer<UByteIndexer>()
+        for (r in 0 until IMAGE_HEIGHT) {
+            for (c in 0 until IMAGE_WIDTH) {
+                val alpha = if (c < IMAGE_WIDTH / 2) 255 else 128
+                sourceIndexer.put(r.toLong(), c.toLong(), 0L, 100)
+                sourceIndexer.put(r.toLong(), c.toLong(), 1L, 150)
+                sourceIndexer.put(r.toLong(), c.toLong(), 2L, 200)
+                sourceIndexer.put(r.toLong(), c.toLong(), 3L, alpha)
+            }
+        }
+
+        result = OpenCvProcessor.quantizeColors(fourChannelImage, 4)
+
+        val resultIndexer = result.createIndexer<UByteIndexer>()
+        assertEquals(255, resultIndexer.get(0L, 0L, 3L))
+        assertEquals(128, resultIndexer.get(0L, (IMAGE_WIDTH - 1).toLong(), 3L))
+
+        fourChannelImage.release()
     }
 
     companion object {

@@ -2,7 +2,7 @@ package org.example.pixnoa.data.repository
 
 import org.bytedeco.javacpp.BytePointer
 import org.bytedeco.opencv.global.opencv_core.CV_8UC1
-import org.bytedeco.opencv.global.opencv_imgcodecs.IMREAD_COLOR
+import org.bytedeco.opencv.global.opencv_imgcodecs.IMREAD_UNCHANGED
 import org.bytedeco.opencv.global.opencv_imgcodecs.imdecode
 import org.bytedeco.opencv.global.opencv_imgcodecs.imencode
 import org.bytedeco.opencv.opencv_core.Mat
@@ -38,7 +38,7 @@ class PixelArtConverterImpl(
 private fun decodeToMat(imageBytes: ByteArray): Mat {
     val bytePointer = BytePointer(*imageBytes)
     val srcMat = Mat(imageBytes.size, 1, CV_8UC1, bytePointer)
-    val decoded = imdecode(srcMat, IMREAD_COLOR)
+    val decoded = imdecode(srcMat, IMREAD_UNCHANGED)
     srcMat.release()
     bytePointer.deallocate()
     return decoded

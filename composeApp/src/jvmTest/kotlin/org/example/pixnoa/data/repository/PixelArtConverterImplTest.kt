@@ -1,12 +1,16 @@
 package org.example.pixnoa.data.repository
 
 import org.bytedeco.javacpp.BytePointer
+import org.bytedeco.javacpp.indexer.UByteIndexer
 import org.bytedeco.opencv.global.opencv_core.CV_8UC1
 import org.bytedeco.opencv.global.opencv_core.CV_8UC3
+import org.bytedeco.opencv.global.opencv_core.CV_8UC4
 import org.bytedeco.opencv.global.opencv_imgcodecs.IMREAD_COLOR
+import org.bytedeco.opencv.global.opencv_imgcodecs.IMREAD_UNCHANGED
 import org.bytedeco.opencv.global.opencv_imgcodecs.imdecode
 import org.bytedeco.opencv.global.opencv_imgcodecs.imencode
 import org.bytedeco.opencv.opencv_core.Mat
+import org.bytedeco.opencv.opencv_core.Scalar
 import org.example.pixnoa.domain.model.PixelArtConfig
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -92,6 +96,45 @@ class PixelArtConverterImplTest {
         val (decodedWidth, decodedHeight) = decodedSize(result.imageBytes)
         assertEquals(200, decodedWidth)
         assertEquals(100, decodedHeight)
+    }
+
+    // 透過(4チャンネル)画像を渡した場合、変換後もアルファチャンネルが保持されること
+    @Test
+    fun convert_withTransparentImage_preservesAlphaChannel() {
+        val converter = PixelArtConverterImpl()
+        val transparentImageBytes = encodedSampleImageWithAlpha(width = 20, height = 20, alpha = 128)
+
+        val result = converter.convert(transparentImageBytes, PixelArtConfig(dotSize = 2, colorCount = 4))
+
+        val decoded = decodeUnchanged(result.imageBytes)
+        assertEquals(4, decoded.channels())
+        val indexer = decoded.createIndexer<UByteIndexer>()
+        assertEquals(128, indexer.get(0L, 0L, 3L))
+        decoded.release()
+    }
+
+    private fun encodedSampleImageWithAlpha(
+        width: Int,
+        height: Int,
+        alpha: Int,
+    ): ByteArray {
+        val mat = Mat(height, width, CV_8UC4, Scalar(100.0, 150.0, 200.0, alpha.toDouble()))
+        val buf = BytePointer()
+        imencode(".png", mat, buf)
+        val bytes = ByteArray(buf.limit().toInt())
+        buf.get(bytes)
+        mat.release()
+        buf.deallocate()
+        return bytes
+    }
+
+    private fun decodeUnchanged(bytes: ByteArray): Mat {
+        val bytePointer = BytePointer(*bytes)
+        val srcMat = Mat(bytes.size, 1, CV_8UC1, bytePointer)
+        val decoded = imdecode(srcMat, IMREAD_UNCHANGED)
+        srcMat.release()
+        bytePointer.deallocate()
+        return decoded
     }
 
     private fun encodedSampleImage(
