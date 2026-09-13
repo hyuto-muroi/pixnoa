@@ -6,10 +6,13 @@ import org.bytedeco.opencv.global.opencv_core.CV_32F
 import org.bytedeco.opencv.global.opencv_core.CV_8U
 import org.bytedeco.opencv.global.opencv_core.KMEANS_PP_CENTERS
 import org.bytedeco.opencv.global.opencv_core.kmeans
+import org.bytedeco.opencv.global.opencv_core.merge
+import org.bytedeco.opencv.global.opencv_core.split
 import org.bytedeco.opencv.global.opencv_imgproc.INTER_AREA
 import org.bytedeco.opencv.global.opencv_imgproc.INTER_NEAREST
 import org.bytedeco.opencv.global.opencv_imgproc.resize
 import org.bytedeco.opencv.opencv_core.Mat
+import org.bytedeco.opencv.opencv_core.MatVector
 import org.bytedeco.opencv.opencv_core.Size
 import org.bytedeco.opencv.opencv_core.TermCriteria
 
@@ -115,6 +118,44 @@ object OpenCvProcessor {
             throw IllegalArgumentException("colorCount exceeds the number of pixels.")
         }
 
+        if (image.channels() != 4) {
+            return quantizeChannels(image, colorCount)
+        }
+
+        val channels = MatVector()
+        split(image, channels)
+
+        val bgr = Mat()
+        merge(MatVector(channels.get(0), channels.get(1), channels.get(2)), bgr)
+
+        val quantizedBgr = quantizeChannels(bgr, colorCount)
+        bgr.release()
+
+        val quantizedChannels = MatVector()
+        split(quantizedBgr, quantizedChannels)
+        quantizedBgr.release()
+
+        val result = Mat()
+        merge(
+            MatVector(
+                quantizedChannels.get(0),
+                quantizedChannels.get(1),
+                quantizedChannels.get(2),
+                channels.get(3),
+            ),
+            result,
+        )
+
+        for (i in 0 until channels.size()) channels.get(i).release()
+        for (i in 0 until quantizedChannels.size()) quantizedChannels.get(i).release()
+
+        return result
+    }
+
+    private fun quantizeChannels(
+        image: Mat,
+        colorCount: Int,
+    ): Mat {
         val floatPixels = Mat()
         val bestLabels = Mat()
         val centers = Mat()
@@ -148,8 +189,6 @@ object OpenCvProcessor {
             throw e
         }
 
-        val dstImg = result.reshape(image.channels(), image.rows())
-
-        return dstImg
+        return result.reshape(image.channels(), image.rows())
     }
 }
