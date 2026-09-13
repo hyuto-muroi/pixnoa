@@ -60,7 +60,7 @@ compose.desktop {
 
         nativeDistributions {
             targetFormats(TargetFormat.Dmg, TargetFormat.Msi, TargetFormat.Deb)
-            packageName = "org.example.pixnoa"
+            packageName = "Pixnoa"
             packageVersion = "1.0.0"
         }
     }
