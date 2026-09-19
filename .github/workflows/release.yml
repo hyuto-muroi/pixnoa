@@ -1,0 +1,123 @@
+name: Release
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  determine-version:
+    name: Determine version
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.get_version.outputs.version }}
+      tag_exists: ${{ steps.check_tag.outputs.exists }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Get version from build.gradle.kts
+        id: get_version
+        run: |
+          VERSION=$(grep 'packageVersion' composeApp/build.gradle.kts | sed -E 's/.*packageVersion = "(.*)".*/\1/')
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+
+      - name: Check if tag already exists
+        id: check_tag
+        run: |
+          if git ls-remote --tags origin | grep -q "refs/tags/v${{ steps.get_version.outputs.version }}$"; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+          fi
+
+  build-macos:
+    name: Build macOS installer
+    needs: determine-version
+    if: needs.determine-version.outputs.tag_exists == 'false'
+    runs-on: macos-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Set up JDK
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - name: Grant execute permission for gradlew
+        run: chmod +x gradlew
+
+      - name: Build dmg
+        run: ./gradlew packageDmg
+
+      - name: Upload dmg artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: macos-dmg
+          path: composeApp/build/compose/binaries/main/dmg/*.dmg
+
+  build-windows:
+    name: Build Windows installer
+    needs: determine-version
+    if: needs.determine-version.outputs.tag_exists == 'false'
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Set up JDK
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - name: Build msi
+        run: ./gradlew.bat packageMsi
+
+      - name: Upload msi artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-msi
+          path: composeApp/build/compose/binaries/main/msi/*.msi
+
+  release:
+    name: Create tag and release
+    needs: [determine-version, build-macos, build-windows]
+    if: needs.determine-version.outputs.tag_exists == 'false'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Download macOS artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: macos-dmg
+          path: artifacts
+
+      - name: Download Windows artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: windows-msi
+          path: artifacts
+
+      - name: Create and push tag
+        run: |
+          TAG="v${{ needs.determine-version.outputs.version }}"
+          git tag "$TAG"
+          git push origin "$TAG"
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: "v${{ needs.determine-version.outputs.version }}"
+          generate_release_notes: true
+          files: artifacts/**

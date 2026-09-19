@@ -1,0 +1,98 @@
+package org.example.pixnoa.ui.screen.converter
+
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.RectangleShape
+import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewmodel.compose.viewModel
+import org.example.pixnoa.data.source.FileHandler
+import org.example.pixnoa.domain.usecase.ConvertToPixelArtUseCase
+import org.example.pixnoa.domain.usecase.ExportImageUseCase
+import org.example.pixnoa.domain.usecase.LoadImageUseCase
+import org.example.pixnoa.ui.component.imagePreview
+import org.example.pixnoa.ui.component.parameterPanel
+
+@Composable
+fun converterScreen(
+    loadImageUseCase: LoadImageUseCase,
+    convertToPixelArtUseCase: ConvertToPixelArtUseCase,
+    exportImageUseCase: ExportImageUseCase,
+    viewModel: ConverterViewModel =
+        viewModel {
+            ConverterViewModel(
+                loadImageUseCase = loadImageUseCase,
+                convertToPixelArtUseCase = convertToPixelArtUseCase,
+                exportImageUseCase = exportImageUseCase,
+            )
+        },
+) {
+    val state by viewModel.uiState.collectAsStateWithLifecycle()
+
+    Row(
+        modifier = Modifier.fillMaxSize(),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        imagePreview(
+            imageBytes = state.convertedImage,
+            modifier = Modifier.weight(1f).fillMaxWidth(),
+        )
+
+        Column(verticalArrangement = Arrangement.spacedBy(8.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+            parameterPanel(
+                config = state.config,
+                onDotSizeChange = { viewModel.onDotSizeChanged(it) },
+                onColorCountChange = { viewModel.onColorCountChanged(it) },
+            )
+            Button(
+                onClick = {
+                    val path = FileHandler.openFileDialog()
+                    if (path != null) {
+                        viewModel.onImageSelected(path)
+                    }
+                },
+                colors =
+                    ButtonDefaults.buttonColors(
+                        containerColor = Color(0xFF0A84FF),
+                        contentColor = Color.White,
+                    ),
+                shape = RectangleShape,
+            ) { Text("ファイルを開く") }
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Button(
+                    onClick = { viewModel.onClear() },
+                    colors =
+                        ButtonDefaults.buttonColors(
+                            containerColor = Color(0xFF0A84FF),
+                            contentColor = Color.White,
+                        ),
+                    shape = RectangleShape,
+                ) { Text("クリア") }
+                Button(
+                    onClick = {
+                        state.convertedImage ?: return@Button
+                        FileHandler.saveFileDialog()?.let { savePath -> viewModel.onExport(savePath) }
+                    },
+                    colors =
+                        ButtonDefaults.buttonColors(
+                            containerColor = Color(0xFF0A84FF),
+                            contentColor = Color.White,
+                        ),
+                    shape = RectangleShape,
+                ) { Text("保存") }
+            }
+        }
+    }
+}

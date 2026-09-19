@@ -5,11 +5,16 @@ plugins {
     alias(libs.plugins.composeMultiplatform)
     alias(libs.plugins.composeCompiler)
     alias(libs.plugins.composeHotReload)
+    alias(libs.plugins.ktlint)
 }
 
 kotlin {
     jvm()
-    
+
+    jvmToolchain {
+        languageVersion.set(JavaLanguageVersion.of(17))
+    }
+
     sourceSets {
         commonMain.dependencies {
             implementation(compose.runtime)
@@ -27,10 +32,27 @@ kotlin {
         jvmMain.dependencies {
             implementation(compose.desktop.currentOs)
             implementation(libs.kotlinx.coroutinesSwing)
+            implementation(libs.opencv.platform)
+        }
+        jvmTest.dependencies {
+            implementation(compose.desktop.uiTestJUnit4)
         }
     }
 }
 
+tasks.withType<Test>().configureEach {
+    systemProperty("java.awt.headless", "true")
+}
+
+ktlint {
+    verbose.set(true)
+    outputToConsole.set(true)
+
+    filter {
+        exclude("**/build/**")
+        exclude("**/generated/**")
+    }
+}
 
 compose.desktop {
     application {
@@ -38,7 +60,7 @@ compose.desktop {
 
         nativeDistributions {
             targetFormats(TargetFormat.Dmg, TargetFormat.Msi, TargetFormat.Deb)
-            packageName = "org.example.pixnoa"
+            packageName = "Pixnoa"
             packageVersion = "1.0.0"
         }
     }
