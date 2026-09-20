@@ -14,6 +14,7 @@ jobs:
     outputs:
       version: ${{ steps.get_version.outputs.version }}
       tag_exists: ${{ steps.check_tag.outputs.exists }}
+      version_ok: ${{ steps.check_version_order.outputs.ok }}
 
     steps:
       - name: Checkout repository
@@ -34,10 +35,33 @@ jobs:
             echo "exists=false" >> "$GITHUB_OUTPUT"
           fi
 
+      - name: Check version is newer than the latest release
+        id: check_version_order
+        run: |
+          VERSION="${{ steps.get_version.outputs.version }}"
+          LATEST_TAG=$(git ls-remote --tags origin | awk '{print $2}' | sed 's#refs/tags/##' | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | sed 's/^v//' | sort -V | tail -n1)
+
+          if [ -z "$LATEST_TAG" ]; then
+            echo "ok=true" >> "$GITHUB_OUTPUT"
+          else
+            HIGHEST=$(printf '%s\n%s\n' "$LATEST_TAG" "$VERSION" | sort -V | tail -n1)
+            if [ "$HIGHEST" == "$VERSION" ] && [ "$VERSION" != "$LATEST_TAG" ]; then
+              echo "ok=true" >> "$GITHUB_OUTPUT"
+            else
+              echo "ok=false" >> "$GITHUB_OUTPUT"
+            fi
+          fi
+
+      - name: Fail if version is not newer than the latest release
+        if: steps.check_tag.outputs.exists == 'false' && steps.check_version_order.outputs.ok == 'false'
+        run: |
+          echo "::error::バージョン(v${{ steps.get_version.outputs.version }})は既存の最新リリースより新しくする必要があります。composeApp/build.gradle.ktsのpackageVersionを確認してください。"
+          exit 1
+
   build-macos:
     name: Build macOS installer
     needs: determine-version
-    if: needs.determine-version.outputs.tag_exists == 'false'
+    if: needs.determine-version.outputs.tag_exists == 'false' && needs.determine-version.outputs.version_ok == 'true'
     runs-on: macos-latest
 
     steps:
@@ -65,7 +89,7 @@ jobs:
   build-windows:
     name: Build Windows installer
     needs: determine-version
-    if: needs.determine-version.outputs.tag_exists == 'false'
+    if: needs.determine-version.outputs.tag_exists == 'false' && needs.determine-version.outputs.version_ok == 'true'
     runs-on: windows-latest
 
     steps:
@@ -90,7 +114,7 @@ jobs:
   release:
     name: Create tag and release
     needs: [determine-version, build-macos, build-windows]
-    if: needs.determine-version.outputs.tag_exists == 'false'
+    if: needs.determine-version.outputs.tag_exists == 'false' && needs.determine-version.outputs.version_ok == 'true'
     runs-on: ubuntu-latest
 
     steps:
