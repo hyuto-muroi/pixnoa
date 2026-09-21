@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="docs/images/logo.svg" width="560" alt="pixnoa">
+</p>
+
 # pixnoa
 
 画像をドット絵に変換するデスクトップアプリケーションです。OpenCVを用いた画像処理により、選んだ画像をレトロゲーム風のドット絵に変換します。
