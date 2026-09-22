@@ -1,0 +1,25 @@
+name: Version Check
+
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened]
+
+jobs:
+  check-version:
+    name: Check version
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Check version
+        id: check_version
+        run: .github/scripts/check-version.sh
+
+      - name: Fail if version is not newer than the latest release
+        if: steps.check_version.outputs.tag_exists == 'false' && steps.check_version.outputs.version_ok == 'false'
+        run: |
+          echo "::error::バージョン(v${{ steps.check_version.outputs.version }})は既存の最新リリースより新しくする必要があります。composeApp/build.gradle.ktsのpackageVersionを確認してください。"
+          exit 1
