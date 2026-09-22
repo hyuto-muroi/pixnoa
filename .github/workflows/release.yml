@@ -12,50 +12,22 @@ jobs:
     name: Determine version
     runs-on: ubuntu-latest
     outputs:
-      version: ${{ steps.get_version.outputs.version }}
-      tag_exists: ${{ steps.check_tag.outputs.exists }}
-      version_ok: ${{ steps.check_version_order.outputs.ok }}
+      version: ${{ steps.check_version.outputs.version }}
+      tag_exists: ${{ steps.check_version.outputs.tag_exists }}
+      version_ok: ${{ steps.check_version.outputs.version_ok }}
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v5
 
-      - name: Get version from build.gradle.kts
-        id: get_version
-        run: |
-          VERSION=$(grep 'packageVersion' composeApp/build.gradle.kts | sed -E 's/.*packageVersion = "(.*)".*/\1/')
-          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
-
-      - name: Check if tag already exists
-        id: check_tag
-        run: |
-          if git ls-remote --tags origin | grep -q "refs/tags/v${{ steps.get_version.outputs.version }}$"; then
-            echo "exists=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "exists=false" >> "$GITHUB_OUTPUT"
-          fi
-
-      - name: Check version is newer than the latest release
-        id: check_version_order
-        run: |
-          VERSION="${{ steps.get_version.outputs.version }}"
-          LATEST_TAG=$(git ls-remote --tags origin | awk '{print $2}' | sed 's#refs/tags/##' | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | sed 's/^v//' | sort -V | tail -n1)
-
-          if [ -z "$LATEST_TAG" ]; then
-            echo "ok=true" >> "$GITHUB_OUTPUT"
-          else
-            HIGHEST=$(printf '%s\n%s\n' "$LATEST_TAG" "$VERSION" | sort -V | tail -n1)
-            if [ "$HIGHEST" == "$VERSION" ] && [ "$VERSION" != "$LATEST_TAG" ]; then
-              echo "ok=true" >> "$GITHUB_OUTPUT"
-            else
-              echo "ok=false" >> "$GITHUB_OUTPUT"
-            fi
-          fi
+      - name: Check version
+        id: check_version
+        run: .github/scripts/check-version.sh
 
       - name: Fail if version is not newer than the latest release
-        if: steps.check_tag.outputs.exists == 'false' && steps.check_version_order.outputs.ok == 'false'
+        if: steps.check_version.outputs.tag_exists == 'false' && steps.check_version.outputs.version_ok == 'false'
         run: |
-          echo "::error::バージョン(v${{ steps.get_version.outputs.version }})は既存の最新リリースより新しくする必要があります。composeApp/build.gradle.ktsのpackageVersionを確認してください。"
+          echo "::error::バージョン(v${{ steps.check_version.outputs.version }})は既存の最新リリースより新しくする必要があります。composeApp/build.gradle.ktsのpackageVersionを確認してください。"
           exit 1
 
   build-macos:
