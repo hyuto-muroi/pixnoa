@@ -61,7 +61,7 @@ compose.desktop {
         nativeDistributions {
             targetFormats(TargetFormat.Dmg, TargetFormat.Msi, TargetFormat.Deb)
             packageName = "Pixnoa"
-            packageVersion = "1.1.1"
+            packageVersion = "1.1.2"
 
             macOS {
                 iconFile.set(project.file("icons/icon.icns"))
