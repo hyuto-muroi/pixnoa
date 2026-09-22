@@ -125,8 +125,10 @@ object OpenCvProcessor {
         val channels = MatVector()
         split(image, channels)
 
+        val bgrChannels = MatVector(channels.get(0), channels.get(1), channels.get(2))
         val bgr = Mat()
-        merge(MatVector(channels.get(0), channels.get(1), channels.get(2)), bgr)
+        merge(bgrChannels, bgr)
+        bgrChannels.close()
 
         val quantizedBgr = quantizeChannels(bgr, colorCount)
         bgr.release()
@@ -136,18 +138,20 @@ object OpenCvProcessor {
         quantizedBgr.release()
 
         val result = Mat()
-        merge(
+        val resultChannels =
             MatVector(
                 quantizedChannels.get(0),
                 quantizedChannels.get(1),
                 quantizedChannels.get(2),
                 channels.get(3),
-            ),
-            result,
-        )
+            )
+        merge(resultChannels, result)
+        resultChannels.close()
 
         for (i in 0 until channels.size()) channels.get(i).release()
         for (i in 0 until quantizedChannels.size()) quantizedChannels.get(i).release()
+        channels.close()
+        quantizedChannels.close()
 
         return result
     }
@@ -181,12 +185,13 @@ object OpenCvProcessor {
                 }
             }
         } catch (e: Exception) {
+            result.release()
+            throw e
+        } finally {
             floatPixels.release()
             bestLabels.release()
             centers.release()
             centers8U.release()
-            result.release()
-            throw e
         }
 
         return result.reshape(image.channels(), image.rows())
